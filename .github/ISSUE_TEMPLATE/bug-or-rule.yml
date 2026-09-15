@@ -1,0 +1,42 @@
+name: Bug report or rule proposal
+description: Report incorrect evidence or propose a metadata-provable rule.
+title: ""
+labels: []
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request type
+      options:
+        - Bug report
+        - Rule proposal
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: metadq and Iceberg versions
+      placeholder: metadq 0.1.0, Iceberg format v2
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Expected and observed behavior
+      description: Do not include credentials or private catalog URLs.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Metadata evidence
+      description: Explain which Iceberg metadata makes the result provable.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scan_free
+    attributes:
+      label: Scope check
+      options:
+        - label: This request does not require opening content data files.
+          required: true

@@ -1,0 +1,3 @@
+uri=https://catalog.example.com/api/catalog
+warehouse=example-warehouse
+io-impl=org.apache.iceberg.aws.s3.S3FileIO

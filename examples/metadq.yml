@@ -1,0 +1,20 @@
+version: 1
+rules:
+  - id: table-is-not-empty
+    type: table.row_count
+    min: 1
+
+  - id: user-id-is-populated
+    type: column.null_ratio
+    column: user_id
+    max: 0
+
+  - id: recent-commit
+    type: table.last_commit_age
+    max: 2h
+
+  - id: event-id-contract
+    type: schema.column
+    column: event_id
+    data_type: string
+    nullable: false
