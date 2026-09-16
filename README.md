@@ -10,8 +10,8 @@ data files.**
 
 No Spark, data-row scan, or service is required.
 
-> **Status:** pre-release. The demo and automated tests are complete; a live
-> REST catalog with S3 storage still needs release-level validation.
+> **Status:** pre-release. The demo, automated tests, and local MinIO/REST
+> workflow are complete; a managed REST catalog with S3 still needs validation.
 
 ## Quick start
 
@@ -56,6 +56,16 @@ java -jar build/libs/metadq.jar check \
 ```
 
 Both commands support `--format text` and `--format json`.
+
+For a reproducible MinIO and Iceberg REST Catalog environment, see the
+[local end-to-end guide](docs/E2E.md).
+
+The [metadata benchmark](docs/BENCHMARK.md) covers 1k, 10k, and 100k live-file
+metadata with no, one, or all column statistics requested.
+
+On the documented Apple M4 reference run, 100k live files took 75 ms for row
+count evidence, 81 ms with one column, and 127 ms with all ten columns. These
+are in-memory metadata timings, not a comparison with a data-row scan.
 
 ## Rules and results
 

@@ -7,11 +7,9 @@ path, and executable JAR are implemented.
 
 - Validate the demo with three Iceberg users. At least two should understand
   `UNKNOWN` and identify a real table or workflow where they would try it.
-- Smoke-test one REST catalog with S3 or S3-compatible `S3FileIO` and document
-  that exact combination.
-- Measure cold-process time and peak memory for metadata representing 1k, 10k,
-  and 100k live files. Publish the environment and results without a general
-  performance claim.
+- Keep the documented MinIO and Iceberg REST Catalog smoke test passing.
+- Add cold-process REST/MinIO request and transfer measurements to the published
+  local 1k, 10k, and 100k collector benchmark.
 - Verify the release JAR and README commands on clean macOS and Linux Java 17
   environments.
 - Tag `0.1.0` and attach the runnable JAR and its checksum.

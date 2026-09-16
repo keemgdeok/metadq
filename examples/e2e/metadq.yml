@@ -1,0 +1,21 @@
+version: 1
+rules:
+  - id: exact-row-count
+    type: table.row_count
+    min: 4
+    max: 4
+
+  - id: user-id-null-ratio
+    type: column.null_ratio
+    column: user_id
+    max: 0.25
+
+  - id: recent-commit
+    type: table.last_commit_age
+    max: 1h
+
+  - id: event-id-contract
+    type: schema.column
+    column: event_id
+    data_type: string
+    nullable: false

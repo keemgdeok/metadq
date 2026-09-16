@@ -50,6 +50,15 @@ class MetadqCliTest {
   }
 
   @Test
+  void doctorRendersCommandErrorsAsJson() {
+    Execution execution = execute("doctor", "--format", "json");
+
+    assertEquals(2, execution.exitCode());
+    assertTrue(execution.err().contains("\"status\" : \"ERROR\""));
+    assertTrue(execution.err().contains("\"reason_code\" : \"INVALID_ARGUMENT\""));
+  }
+
+  @Test
   void checkRejectsRulesBeforeConnectingToCatalog() throws Exception {
     Path invalidRules = directory.resolve("invalid.yml");
     Files.writeString(
@@ -76,6 +85,50 @@ class MetadqCliTest {
     assertEquals(2, execution.exitCode());
     assertTrue(execution.err().contains("rules[0].unknown"));
     assertTrue(!execution.err().contains("Catalog properties file not found"));
+  }
+
+  @Test
+  void checkRendersRuleAndCatalogErrorsAsJson() throws Exception {
+    Path invalidRules = directory.resolve("invalid-json.yml");
+    Files.writeString(invalidRules, "version: 1\nrules: []\n");
+
+    Execution invalidRule =
+        execute(
+            "check",
+            "--catalog-properties",
+            directory.resolve("missing.properties").toString(),
+            "--table",
+            "analytics.events",
+            "--rules",
+            invalidRules.toString(),
+            "--format",
+            "json");
+    assertEquals(2, invalidRule.exitCode());
+    assertTrue(invalidRule.err().contains("\"reason_code\" : \"INVALID_RULE\""));
+
+    Path validRules = directory.resolve("valid.yml");
+    Files.writeString(
+        validRules,
+        """
+        version: 1
+        rules:
+          - id: rows
+            type: table.row_count
+            min: 1
+        """);
+    Execution catalogError =
+        execute(
+            "check",
+            "--catalog-properties",
+            directory.resolve("missing.properties").toString(),
+            "--table",
+            "analytics.events",
+            "--rules",
+            validRules.toString(),
+            "--format",
+            "json");
+    assertEquals(2, catalogError.exitCode());
+    assertTrue(catalogError.err().contains("\"reason_code\" : \"CATALOG_ERROR\""));
   }
 
   private static Execution execute(String... arguments) {

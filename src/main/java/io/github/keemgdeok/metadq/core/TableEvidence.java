@@ -16,7 +16,8 @@ public record TableEvidence(
     long metadataRecordCount,
     Map<String, Long> deleteFileCounts,
     Map<String, ColumnEvidence> columns,
-    boolean inconsistentMetrics) {
+    boolean recordCountsInconsistent,
+    boolean referencedDataBytesInconsistent) {
 
   public TableEvidence {
     deleteFileCounts = immutableCopy(deleteFileCounts);
@@ -33,6 +34,12 @@ public record TableEvidence(
 
   public boolean hasApplicableDeletes() {
     return deleteFileCounts.values().stream().anyMatch(count -> count > 0);
+  }
+
+  public boolean hasAnyInconsistentMetrics() {
+    return recordCountsInconsistent
+        || referencedDataBytesInconsistent
+        || columns.values().stream().anyMatch(ColumnEvidence::inconsistentMetrics);
   }
 
   public record ColumnEvidence(
