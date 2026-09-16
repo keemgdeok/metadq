@@ -115,6 +115,43 @@ class RuleEvaluatorTest {
   }
 
   @Test
+  void nullRatioIgnoresInconsistentUnrelatedColumn() {
+    TableEvidence base = evidence(100, true, false, false, false);
+    Map<String, ColumnEvidence> columns = new LinkedHashMap<>(base.columns());
+    columns.put(
+        "comment",
+        new ColumnEvidence(
+            3,
+            "comment",
+            "string",
+            true,
+            false,
+            false,
+            new MetricCoverage(2, 2, 2, 0, 2),
+            0,
+            true,
+            true));
+    TableEvidence unrelated =
+        new TableEvidence(
+            base.tableName(),
+            base.formatVersion(),
+            base.snapshotId(),
+            base.snapshotTimestamp(),
+            base.snapshotOperation(),
+            base.dataFileCount(),
+            base.referencedDataBytes(),
+            base.metadataRecordCount(),
+            base.deleteFileCounts(),
+            columns,
+            false,
+            false);
+
+    RuleResult result = evaluate(new NullRatioRule("nulls", "user_id", 0.05), unrelated);
+
+    assertEquals(Status.PASS, result.status());
+  }
+
+  @Test
   void missingColumnFailsAndDeleteStateMakesNullRatioUnknown() {
     RuleResult missing =
         evaluate(

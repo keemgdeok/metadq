@@ -31,7 +31,10 @@ class EvidenceCollectorTest {
       assertEquals(6_144, evidence.referencedDataBytes());
       assertEquals(1_200, evidence.metadataRecordCount());
       assertFalse(evidence.hasApplicableDeletes());
-      assertFalse(evidence.hasAnyInconsistentMetrics());
+      assertFalse(evidence.recordCountsInconsistent());
+      assertFalse(evidence.referencedDataBytesInconsistent());
+      assertTrue(
+          evidence.columns().values().stream().noneMatch(column -> column.inconsistentMetrics()));
       assertEquals(2, evidence.columns().get("user_id").coverage().nullCountFiles());
       assertFalse(evidence.columns().get("user_id").nullCountsCompleteForRows());
 
@@ -107,7 +110,6 @@ class EvidenceCollectorTest {
       var evidence = new EvidenceCollector().collect("demo.events", demo.table());
 
       assertFalse(evidence.recordCountsInconsistent());
-      assertTrue(evidence.hasAnyInconsistentMetrics());
       assertTrue(evidence.columns().get("user_id").inconsistentMetrics());
     }
   }
@@ -140,6 +142,7 @@ class EvidenceCollectorTest {
 
       assertEquals(2, evidence.columns().get("user_id").coverage().nullCountFiles());
       assertEquals(0, evidence.columns().get("event_id").coverage().nullCountFiles());
+      assertFalse(evidence.columns().get("score").nullCountsCompleteForRows());
       assertEquals(1_200, evidence.metadataRecordCount());
     }
   }

@@ -34,6 +34,7 @@ Measured on September 16, 2026:
 - Eclipse Temurin 17.0.20
 - Apache Iceberg 1.11.0
 - 2 GiB maximum benchmark heap
+- Source revision `2413de1`
 
 | Live files | Mode | Median runtime | Peak heap |
 | ---: | --- | ---: | ---: |

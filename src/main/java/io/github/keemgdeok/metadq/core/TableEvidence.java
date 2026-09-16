@@ -36,12 +36,6 @@ public record TableEvidence(
     return deleteFileCounts.values().stream().anyMatch(count -> count > 0);
   }
 
-  public boolean hasAnyInconsistentMetrics() {
-    return recordCountsInconsistent
-        || referencedDataBytesInconsistent
-        || columns.values().stream().anyMatch(ColumnEvidence::inconsistentMetrics);
-  }
-
   public record ColumnEvidence(
       int fieldId,
       String name,

@@ -148,13 +148,14 @@ public final class EvidenceCollector {
     private long nanCountFiles;
     private long boundsFiles;
     private long nullCount;
-    private boolean nullCountsCompleteForRows = true;
+    private boolean nullCountsCompleteForRows;
     private boolean inconsistent;
 
     private ColumnAccumulator(Types.NestedField field, boolean primitive, boolean collectMetrics) {
       this.field = field;
       this.primitive = primitive;
       this.collectMetrics = collectMetrics;
+      this.nullCountsCompleteForRows = collectMetrics;
       Type.TypeID typeId = field.type().typeId();
       this.nanApplicable = typeId == Type.TypeID.FLOAT || typeId == Type.TypeID.DOUBLE;
     }
