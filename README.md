@@ -1,14 +1,15 @@
 # metadq
 
-**Data-quality checks from Apache Iceberg metadata, without opening content
-data files.**
+[![Release](https://img.shields.io/github/v/release/keemgdeok/metadq?include_prereleases&sort=semver)](https://github.com/keemgdeok/metadq/releases)
+[![CI](https://github.com/keemgdeok/metadq/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/keemgdeok/metadq/actions/workflows/ci.yml)
+[![Java 17+](https://img.shields.io/badge/Java-17%2B-007396?logo=openjdk&logoColor=white)](https://adoptium.net/temurin/releases/)
 
-`metadq` is a read-only Java CLI with two commands:
+**Fast, conservative data-quality checks for Apache Iceberg—without Spark or
+data-file scans.**
 
-- `doctor` explains which metadata evidence is available.
-- `check` evaluates four conservative rules for CI and orchestration.
-
-No Spark, data-row scan, or service is required.
+| Metadata-only | Standalone | Automation-ready |
+| --- | --- | --- |
+| Reads metadata and manifests | One Java CLI; no Spark or service | Text/JSON and documented exit codes |
 
 > **Status:** 0.1.0 release candidate. The demo, automated tests, and local
 > MinIO/REST workflow are complete; a managed REST catalog with S3 still needs
@@ -26,8 +27,6 @@ java -jar metadq.jar doctor --demo
 The demo creates an Iceberg v2 table in memory with metadata pointing to
 nonexistent sentinel data files.
 
-A report excerpt:
-
 ```text
 TABLE      demo.events
 FORMAT     v2
@@ -37,36 +36,19 @@ NOTE       column.null_ratio(user_id) is not ready: null counts cover 2/3 files
 GUARD      No content data files opened.
 ```
 
-## Use a REST catalog
+## How it works
 
-Configure the included examples, then run `doctor` or `check` against one
-table:
-
-```console
-cp examples/catalog.properties.example catalog.properties
-cp examples/metadq.yml metadq.yml
-
-java -jar build/libs/metadq.jar doctor \
-  --catalog-properties catalog.properties \
-  --table analytics.events
-
-java -jar build/libs/metadq.jar check \
-  --catalog-properties catalog.properties \
-  --table analytics.events \
-  --rules metadq.yml
+```mermaid
+flowchart LR
+    A["Iceberg catalog"] --> B["Metadata & manifests"]
+    B --> C["metadq"]
+    C --> D["PASS · FAIL · UNKNOWN"]
 ```
 
-Both commands support `--format text` and `--format json`.
+`metadq` is a read-only Java CLI with two commands:
 
-For a reproducible MinIO and Iceberg REST Catalog environment, see the
-[local end-to-end guide](docs/E2E.md).
-
-The [metadata benchmark](docs/BENCHMARK.md) covers 1k, 10k, and 100k live-file
-metadata with no, one, or all column statistics requested.
-
-On the documented Apple M4 reference run, 100k live files took 75 ms for row
-count evidence, 81 ms with one column, and 127 ms with all ten columns. These
-are in-memory metadata timings, not a comparison with a data-row scan.
+- `doctor` explains which metadata evidence is available.
+- `check` evaluates four conservative rules for CI and orchestration.
 
 ## Rules and results
 
@@ -83,6 +65,43 @@ delete files exist. Operational and configuration errors return `ERROR`.
 
 Overall exit codes are `0` when all rules pass, `1` for any failure, `2` for an
 error, and `3` for an unknown result when there is no failure or error.
+
+## Connect a REST catalog
+
+Configure the included examples, then run `doctor` or `check` against one
+table:
+
+```console
+cp examples/catalog.properties.example catalog.properties
+cp examples/metadq.yml metadq.yml
+
+java -jar metadq.jar doctor \
+  --catalog-properties catalog.properties \
+  --table analytics.events
+
+java -jar metadq.jar check \
+  --catalog-properties catalog.properties \
+  --table analytics.events \
+  --rules metadq.yml
+```
+
+Both commands support `--format text` and `--format json`. For a reproducible
+MinIO and Iceberg REST Catalog environment, see the
+[local end-to-end guide](docs/E2E.md).
+
+## Performance
+
+The most useful rows from the documented Apple M4 reference run are:
+
+| 100,000 live files | Median runtime | Peak heap |
+| --- | ---: | ---: |
+| Row count | 75 ms | 71 MiB |
+| One column | 81 ms | 128 MiB |
+| All ten columns | 127 ms | 247 MiB |
+
+These are in-memory metadata timings, not a comparison with a data-row scan.
+See the [benchmark methodology and full results](docs/BENCHMARK.md) for the 1k,
+10k, and 100k file runs.
 
 ## Scope
 
