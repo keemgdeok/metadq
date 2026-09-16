@@ -11,9 +11,7 @@ data-file scans.**
 | --- | --- | --- |
 | Reads metadata and manifests | One Java CLI; no Spark or service | Text/JSON and documented exit codes |
 
-> **Status:** 0.1.0 release candidate. The demo, automated tests, and local
-> MinIO/REST workflow are complete; a managed REST catalog with S3 still needs
-> validation.
+> **Status:** v0.1.0-rc.1 pre-release.
 
 ## Quick start
 
@@ -24,8 +22,8 @@ curl -LO https://github.com/keemgdeok/metadq/releases/download/v0.1.0-rc.1/metad
 java -jar metadq.jar doctor --demo
 ```
 
-The demo creates an Iceberg v2 table in memory with metadata pointing to
-nonexistent sentinel data files.
+The demo runs against an in-memory Iceberg v2 table and never opens content
+data files.
 
 ```text
 TABLE      demo.events
@@ -91,13 +89,13 @@ MinIO and Iceberg REST Catalog environment, see the
 
 ## Performance
 
-The most useful rows from the documented Apple M4 reference run are:
+The 100,000-live-file results from the documented Apple M4 reference run are:
 
-| 100,000 live files | Median runtime | Peak heap |
+| Requested column statistics | Median runtime | Peak heap |
 | --- | ---: | ---: |
-| Row count | 75 ms | 71 MiB |
-| One column | 81 ms | 128 MiB |
-| All ten columns | 127 ms | 247 MiB |
+| None | 75 ms | 71 MiB |
+| 1 column | 81 ms | 128 MiB |
+| 10 columns | 127 ms | 247 MiB |
 
 These are in-memory metadata timings, not a comparison with a data-row scan.
 See the [benchmark methodology and full results](docs/BENCHMARK.md) for the 1k,
