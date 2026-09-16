@@ -1,10 +1,13 @@
 package io.github.keemgdeok.metadq.cli;
 
+import io.github.keemgdeok.metadq.core.ReasonCode;
 import io.github.keemgdeok.metadq.core.TableEvidence;
 import io.github.keemgdeok.metadq.iceberg.CatalogLoader;
 import io.github.keemgdeok.metadq.iceberg.DemoTableFactory;
 import io.github.keemgdeok.metadq.iceberg.EvidenceCollector;
+import io.github.keemgdeok.metadq.iceberg.UnsupportedFormatVersionException;
 import io.github.keemgdeok.metadq.output.DoctorRenderer;
+import io.github.keemgdeok.metadq.output.ErrorRenderer;
 import io.github.keemgdeok.metadq.output.OutputFormat;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -39,24 +42,20 @@ final class DoctorCommand implements Callable<Integer> {
   public Integer call() {
     try {
       validateSource();
-      EvidenceCollector collector = new EvidenceCollector();
-      TableEvidence evidence;
-      if (demo) {
-        try (DemoTableFactory.DemoTable demoTable = DemoTableFactory.create()) {
-          evidence = collector.collect("demo.events", demoTable.table());
-        }
-      } else {
-        try (CatalogLoader.CatalogTable catalogTable =
-            CatalogLoader.load(catalogProperties, tableIdentifier)) {
-          evidence = collector.collect(tableIdentifier, catalogTable.table());
-        }
-      }
-      spec.commandLine().getOut().println(new DoctorRenderer().render(evidence, format));
-      return 0;
-    } catch (Exception exception) {
-      spec.commandLine().getErr().println("ERROR: " + errorMessage(exception));
-      return 2;
+    } catch (IllegalArgumentException exception) {
+      return error(ReasonCode.INVALID_ARGUMENT, exception);
     }
+
+    TableEvidence evidence;
+    try {
+      evidence = collectEvidence();
+    } catch (UnsupportedFormatVersionException exception) {
+      return error(ReasonCode.UNSUPPORTED_FORMAT_VERSION, exception);
+    } catch (Exception exception) {
+      return error(ReasonCode.CATALOG_ERROR, exception);
+    }
+    spec.commandLine().getOut().println(new DoctorRenderer().render(evidence, format));
+    return 0;
   }
 
   private void validateSource() {
@@ -71,8 +70,21 @@ final class DoctorCommand implements Callable<Integer> {
     }
   }
 
-  private static String errorMessage(Exception exception) {
-    String message = exception.getMessage();
-    return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
+  private TableEvidence collectEvidence() throws Exception {
+    EvidenceCollector collector = new EvidenceCollector();
+    if (demo) {
+      try (DemoTableFactory.DemoTable demoTable = DemoTableFactory.create()) {
+        return collector.collect("demo.events", demoTable.table());
+      }
+    }
+    try (CatalogLoader.CatalogTable catalogTable =
+        CatalogLoader.load(catalogProperties, tableIdentifier)) {
+      return collector.collect(tableIdentifier, catalogTable.table());
+    }
+  }
+
+  private int error(ReasonCode reasonCode, Exception exception) {
+    spec.commandLine().getErr().println(new ErrorRenderer().render(reasonCode, exception, format));
+    return 2;
   }
 }

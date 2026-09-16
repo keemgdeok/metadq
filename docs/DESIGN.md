@@ -211,6 +211,11 @@ Validation remains deliberately small:
 
 Overall precedence is `ERROR`, `FAIL`, `UNKNOWN`, `PASS`.
 
+After command arguments are parsed, `--format json` also renders rule,
+catalog, and unsupported-format failures as a versioned error document on
+standard error. Command-line syntax errors raised by Picocli before command
+execution remain text diagnostics.
+
 ## 7. Configuration
 
 `--catalog-properties` is a Java properties file passed to Iceberg's catalog

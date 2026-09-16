@@ -88,3 +88,19 @@ tasks.shadowJar {
 tasks.build {
     dependsOn(tasks.shadowJar)
 }
+
+val benchmark = sourceSets.create("benchmark") {
+    compileClasspath += sourceSets.main.get().output + configurations.testRuntimeClasspath.get()
+    runtimeClasspath += output + compileClasspath
+}
+
+tasks.register<JavaExec>("metadataBenchmark") {
+    group = "verification"
+    description = "Measure metadata collection for synthetic Iceberg file counts."
+    classpath = benchmark.runtimeClasspath
+    mainClass = "io.github.keemgdeok.metadq.benchmark.MetadataBenchmark"
+    maxHeapSize = "2g"
+    if (project.hasProperty("counts")) {
+        args(project.property("counts").toString().split(","))
+    }
+}

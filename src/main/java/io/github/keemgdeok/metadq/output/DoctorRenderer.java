@@ -106,15 +106,20 @@ public final class DoctorRenderer {
 
   private static List<String> notes(TableEvidence evidence) {
     List<String> notes = new ArrayList<>();
-    if (evidence.inconsistentMetrics()) {
+    if (evidence.recordCountsInconsistent()) {
       notes.add("row/null checks are not ready: inconsistent metrics");
     } else if (evidence.hasApplicableDeletes()) {
       notes.add("row/null checks are not ready: applicable delete files exist");
     } else {
       notes.add("table.row_count is ready");
     }
+    if (evidence.referencedDataBytesInconsistent()) {
+      notes.add("referenced byte total is inconsistent");
+    }
     for (ColumnEvidence column : evidence.columns().values()) {
-      if (column.primitive() && !column.required() && !column.nullCountsCompleteForRows()) {
+      if (column.inconsistentMetrics()) {
+        notes.add("column.null_ratio(" + column.name() + ") is not ready: inconsistent metrics");
+      } else if (column.primitive() && !column.required() && !column.nullCountsCompleteForRows()) {
         notes.add(
             "column.null_ratio("
                 + column.name()

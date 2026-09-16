@@ -19,12 +19,24 @@ import org.apache.iceberg.HasTableOperations;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableProperties;
+import org.apache.iceberg.TableScan;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 
 public final class EvidenceCollector {
   public TableEvidence collect(String tableName, Table table) throws IOException {
+    Set<String> requestedColumns = new HashSet<>();
+    for (Types.NestedField field : table.schema().columns()) {
+      if (field.type().isPrimitiveType()) {
+        requestedColumns.add(field.name());
+      }
+    }
+    return collect(tableName, table, requestedColumns);
+  }
+
+  public TableEvidence collect(String tableName, Table table, Set<String> requestedColumns)
+      throws IOException {
     int formatVersion = parseFormatVersion(table);
     if (formatVersion < 1 || formatVersion > 2) {
       throw new UnsupportedFormatVersionException(formatVersion);
@@ -35,39 +47,47 @@ public final class EvidenceCollector {
     List<String> primitiveColumns = new ArrayList<>();
     for (Types.NestedField field : table.schema().columns()) {
       boolean primitive = field.type().isPrimitiveType();
-      if (primitive) {
+      boolean requested = primitive && requestedColumns.contains(field.name());
+      if (requested) {
         primitiveColumns.add(field.name());
       }
-      accumulators.put(field.name(), new ColumnAccumulator(field, primitive));
+      accumulators.put(field.name(), new ColumnAccumulator(field, primitive, requested));
     }
 
     long dataFileCount = 0;
     long referencedBytes = 0;
     long recordCount = 0;
-    boolean inconsistent = false;
+    boolean recordCountsInconsistent = false;
+    boolean referencedDataBytesInconsistent = false;
     Map<String, Long> deleteCounts = new TreeMap<>();
     Set<DeleteKey> seenDeletes = new HashSet<>();
 
     if (snapshot != null) {
-      try (CloseableIterable<FileScanTask> tasks =
-          table.newScan().includeColumnStats(primitiveColumns).planFiles()) {
+      TableScan scan = table.newScan();
+      if (!primitiveColumns.isEmpty()) {
+        scan = scan.includeColumnStats(primitiveColumns);
+      }
+      try (CloseableIterable<FileScanTask> tasks = scan.planFiles()) {
         for (FileScanTask task : tasks) {
           DataFile file = task.file();
           dataFileCount++;
-          if (file.fileSizeInBytes() < 0 || file.recordCount() < 0) {
-            inconsistent = true;
+          if (file.fileSizeInBytes() < 0) {
+            referencedDataBytesInconsistent = true;
+          }
+          if (file.recordCount() < 0) {
+            recordCountsInconsistent = true;
           }
           try {
             referencedBytes = Math.addExact(referencedBytes, file.fileSizeInBytes());
           } catch (ArithmeticException exception) {
             referencedBytes = file.fileSizeInBytes() >= 0 ? Long.MAX_VALUE : Long.MIN_VALUE;
-            inconsistent = true;
+            referencedDataBytesInconsistent = true;
           }
           try {
             recordCount = Math.addExact(recordCount, file.recordCount());
           } catch (ArithmeticException exception) {
             recordCount = file.recordCount() >= 0 ? Long.MAX_VALUE : Long.MIN_VALUE;
-            inconsistent = true;
+            recordCountsInconsistent = true;
           }
           for (ColumnAccumulator accumulator : accumulators.values()) {
             accumulator.accept(file);
@@ -86,7 +106,6 @@ public final class EvidenceCollector {
     for (ColumnAccumulator accumulator : accumulators.values()) {
       ColumnEvidence column = accumulator.toEvidence(dataFileCount);
       columns.put(column.name(), column);
-      inconsistent |= column.inconsistentMetrics();
     }
 
     return new TableEvidence(
@@ -100,7 +119,8 @@ public final class EvidenceCollector {
         recordCount,
         deleteCounts,
         columns,
-        inconsistent);
+        recordCountsInconsistent,
+        referencedDataBytesInconsistent);
   }
 
   private static int parseFormatVersion(Table table) {
@@ -121,24 +141,27 @@ public final class EvidenceCollector {
   private static final class ColumnAccumulator {
     private final Types.NestedField field;
     private final boolean primitive;
+    private final boolean collectMetrics;
     private final boolean nanApplicable;
     private long valueCountFiles;
     private long nullCountFiles;
     private long nanCountFiles;
     private long boundsFiles;
     private long nullCount;
-    private boolean nullCountsCompleteForRows = true;
+    private boolean nullCountsCompleteForRows;
     private boolean inconsistent;
 
-    private ColumnAccumulator(Types.NestedField field, boolean primitive) {
+    private ColumnAccumulator(Types.NestedField field, boolean primitive, boolean collectMetrics) {
       this.field = field;
       this.primitive = primitive;
+      this.collectMetrics = collectMetrics;
+      this.nullCountsCompleteForRows = collectMetrics;
       Type.TypeID typeId = field.type().typeId();
       this.nanApplicable = typeId == Type.TypeID.FLOAT || typeId == Type.TypeID.DOUBLE;
     }
 
     private void accept(DataFile file) {
-      if (!primitive) {
+      if (!collectMetrics) {
         return;
       }
 
@@ -171,6 +194,9 @@ public final class EvidenceCollector {
         inconsistent = true;
       }
       if (values != null && nulls != null && nulls > values) {
+        inconsistent = true;
+      }
+      if (field.isRequired() && nulls != null && nulls > 0) {
         inconsistent = true;
       }
       long knownNulls = nulls == null ? 0 : nulls;

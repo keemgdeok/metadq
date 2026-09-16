@@ -44,7 +44,7 @@ public final class RuleEvaluator {
   private static RuleResult evaluateRowCount(
       RowCountRule rule, TableEvidence evidence, Instant evaluatedAt) {
     String expected = range(rule.min(), rule.max());
-    if (evidence.inconsistentMetrics()) {
+    if (evidence.recordCountsInconsistent()) {
       return result(
           rule,
           Status.UNKNOWN,
@@ -102,7 +102,7 @@ public final class RuleEvaluator {
           evidence,
           evaluatedAt);
     }
-    if (evidence.inconsistentMetrics() || column.inconsistentMetrics()) {
+    if (evidence.recordCountsInconsistent() || column.inconsistentMetrics()) {
       return result(
           rule,
           Status.UNKNOWN,

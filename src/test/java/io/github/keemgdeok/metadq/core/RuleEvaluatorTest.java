@@ -44,6 +44,29 @@ class RuleEvaluatorTest {
   }
 
   @Test
+  void rowCountIgnoresUnrelatedColumnAndByteInconsistency() {
+    TableEvidence base = evidence(100, true, false, false, false);
+    TableEvidence unrelated =
+        new TableEvidence(
+            base.tableName(),
+            base.formatVersion(),
+            base.snapshotId(),
+            base.snapshotTimestamp(),
+            base.snapshotOperation(),
+            base.dataFileCount(),
+            base.referencedDataBytes(),
+            base.metadataRecordCount(),
+            base.deleteFileCounts(),
+            inconsistentColumn(base.columns()),
+            false,
+            true);
+
+    RuleResult result = evaluate(new RowCountRule("rows", 100L, 100L), unrelated);
+
+    assertEquals(Status.PASS, result.status());
+  }
+
+  @Test
   void nullRatioHandlesCompleteMissingRequiredAndEmptyEvidence() {
     NullRatioRule rule = new NullRatioRule("nulls", "user_id", 0.05);
     assertEquals(Status.PASS, evaluate(rule, evidence(100, true, false, false, false)).status());
@@ -65,6 +88,67 @@ class RuleEvaluatorTest {
     RuleResult empty = evaluate(rule, evidence(0, true, false, false, false));
     assertEquals(Status.UNKNOWN, empty.status());
     assertEquals(ReasonCode.EMPTY_TABLE, empty.reasonCode());
+  }
+
+  @Test
+  void nullRatioRejectsInconsistentTargetColumn() {
+    TableEvidence base = evidence(100, true, false, false, false);
+    TableEvidence inconsistent =
+        new TableEvidence(
+            base.tableName(),
+            base.formatVersion(),
+            base.snapshotId(),
+            base.snapshotTimestamp(),
+            base.snapshotOperation(),
+            base.dataFileCount(),
+            base.referencedDataBytes(),
+            base.metadataRecordCount(),
+            base.deleteFileCounts(),
+            inconsistentColumn(base.columns()),
+            false,
+            false);
+
+    RuleResult result = evaluate(new NullRatioRule("nulls", "user_id", 0.1), inconsistent);
+
+    assertEquals(Status.UNKNOWN, result.status());
+    assertEquals(ReasonCode.INCONSISTENT_METRICS, result.reasonCode());
+  }
+
+  @Test
+  void nullRatioIgnoresInconsistentUnrelatedColumn() {
+    TableEvidence base = evidence(100, true, false, false, false);
+    Map<String, ColumnEvidence> columns = new LinkedHashMap<>(base.columns());
+    columns.put(
+        "comment",
+        new ColumnEvidence(
+            3,
+            "comment",
+            "string",
+            true,
+            false,
+            false,
+            new MetricCoverage(2, 2, 2, 0, 2),
+            0,
+            true,
+            true));
+    TableEvidence unrelated =
+        new TableEvidence(
+            base.tableName(),
+            base.formatVersion(),
+            base.snapshotId(),
+            base.snapshotTimestamp(),
+            base.snapshotOperation(),
+            base.dataFileCount(),
+            base.referencedDataBytes(),
+            base.metadataRecordCount(),
+            base.deleteFileCounts(),
+            columns,
+            false,
+            false);
+
+    RuleResult result = evaluate(new NullRatioRule("nulls", "user_id", 0.05), unrelated);
+
+    assertEquals(Status.PASS, result.status());
   }
 
   @Test
@@ -111,7 +195,8 @@ class RuleEvaluatorTest {
             base.metadataRecordCount(),
             base.deleteFileCounts(),
             columns,
-            base.inconsistentMetrics());
+            base.recordCountsInconsistent(),
+            base.referencedDataBytesInconsistent());
 
     RuleResult result = evaluate(new NullRatioRule("nulls", "payload", 0.1), withNested);
 
@@ -195,7 +280,8 @@ class RuleEvaluatorTest {
         rows,
         deletes ? Map.of("position_deletes", 1L) : Map.of(),
         columns,
-        inconsistent);
+        inconsistent,
+        false);
   }
 
   private static TableEvidence withoutSnapshot(TableEvidence evidence) {
@@ -210,6 +296,27 @@ class RuleEvaluatorTest {
         evidence.metadataRecordCount(),
         evidence.deleteFileCounts(),
         evidence.columns(),
-        evidence.inconsistentMetrics());
+        evidence.recordCountsInconsistent(),
+        evidence.referencedDataBytesInconsistent());
+  }
+
+  private static Map<String, ColumnEvidence> inconsistentColumn(
+      Map<String, ColumnEvidence> source) {
+    Map<String, ColumnEvidence> columns = new LinkedHashMap<>(source);
+    ColumnEvidence column = columns.get("user_id");
+    columns.put(
+        "user_id",
+        new ColumnEvidence(
+            column.fieldId(),
+            column.name(),
+            column.dataType(),
+            column.primitive(),
+            column.required(),
+            column.nanApplicable(),
+            column.coverage(),
+            column.nullCount(),
+            column.nullCountsCompleteForRows(),
+            true));
+    return columns;
   }
 }

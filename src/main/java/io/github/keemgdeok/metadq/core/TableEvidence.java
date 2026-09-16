@@ -16,7 +16,8 @@ public record TableEvidence(
     long metadataRecordCount,
     Map<String, Long> deleteFileCounts,
     Map<String, ColumnEvidence> columns,
-    boolean inconsistentMetrics) {
+    boolean recordCountsInconsistent,
+    boolean referencedDataBytesInconsistent) {
 
   public TableEvidence {
     deleteFileCounts = immutableCopy(deleteFileCounts);

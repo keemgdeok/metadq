@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
+import java.util.Set;
 import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileMetadata;
@@ -30,7 +31,10 @@ class EvidenceCollectorTest {
       assertEquals(6_144, evidence.referencedDataBytes());
       assertEquals(1_200, evidence.metadataRecordCount());
       assertFalse(evidence.hasApplicableDeletes());
-      assertFalse(evidence.inconsistentMetrics());
+      assertFalse(evidence.recordCountsInconsistent());
+      assertFalse(evidence.referencedDataBytesInconsistent());
+      assertTrue(
+          evidence.columns().values().stream().noneMatch(column -> column.inconsistentMetrics()));
       assertEquals(2, evidence.columns().get("user_id").coverage().nullCountFiles());
       assertFalse(evidence.columns().get("user_id").nullCountsCompleteForRows());
 
@@ -105,8 +109,41 @@ class EvidenceCollectorTest {
 
       var evidence = new EvidenceCollector().collect("demo.events", demo.table());
 
-      assertTrue(evidence.inconsistentMetrics());
+      assertFalse(evidence.recordCountsInconsistent());
       assertTrue(evidence.columns().get("user_id").inconsistentMetrics());
+    }
+  }
+
+  @Test
+  void marksPositiveNullCountForRequiredColumnAsInconsistent() throws Exception {
+    try (DemoTableFactory.DemoTable demo = DemoTableFactory.create()) {
+      var contradictory =
+          DataFiles.builder(demo.table().spec())
+              .withPath("memory://metadq/content/required-null.parquet")
+              .withFormat(FileFormat.PARQUET)
+              .withFileSizeInBytes(128)
+              .withRecordCount(10)
+              .withMetrics(new Metrics(10L, null, Map.of(1, 10L), Map.of(1, 1L), null))
+              .build();
+      demo.table().newAppend().appendFile(contradictory).commit();
+
+      var evidence = new EvidenceCollector().collect("demo.events", demo.table());
+
+      assertTrue(evidence.columns().get("event_id").inconsistentMetrics());
+      assertFalse(evidence.recordCountsInconsistent());
+    }
+  }
+
+  @Test
+  void collectsStatisticsOnlyForRequestedColumns() throws Exception {
+    try (DemoTableFactory.DemoTable demo = DemoTableFactory.create()) {
+      var evidence =
+          new EvidenceCollector().collect("demo.events", demo.table(), Set.of("user_id"));
+
+      assertEquals(2, evidence.columns().get("user_id").coverage().nullCountFiles());
+      assertEquals(0, evidence.columns().get("event_id").coverage().nullCountFiles());
+      assertFalse(evidence.columns().get("score").nullCountsCompleteForRows());
+      assertEquals(1_200, evidence.metadataRecordCount());
     }
   }
 
@@ -131,7 +168,8 @@ class EvidenceCollectorTest {
 
       var evidence = new EvidenceCollector().collect("demo.events", demo.table());
 
-      assertTrue(evidence.inconsistentMetrics());
+      assertTrue(evidence.recordCountsInconsistent());
+      assertTrue(evidence.referencedDataBytesInconsistent());
       assertEquals(Long.MAX_VALUE, evidence.referencedDataBytes());
       assertEquals(Long.MAX_VALUE, evidence.metadataRecordCount());
       assertEquals(Long.MAX_VALUE, evidence.columns().get("user_id").nullCount());
