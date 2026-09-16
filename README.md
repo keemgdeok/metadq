@@ -10,16 +10,17 @@ data files.**
 
 No Spark, data-row scan, or service is required.
 
-> **Status:** pre-release. The demo, automated tests, and local MinIO/REST
-> workflow are complete; a managed REST catalog with S3 still needs validation.
+> **Status:** 0.1.0 release candidate. The demo, automated tests, and local
+> MinIO/REST workflow are complete; a managed REST catalog with S3 still needs
+> validation.
 
 ## Quick start
 
 Java 17 or newer is required.
 
 ```console
-./gradlew shadowJar
-java -jar build/libs/metadq.jar doctor --demo
+curl -LO https://github.com/keemgdeok/metadq/releases/download/v0.1.0-rc.1/metadq.jar
+java -jar metadq.jar doctor --demo
 ```
 
 The demo creates an Iceberg v2 table in memory with metadata pointing to
