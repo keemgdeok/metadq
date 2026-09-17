@@ -11,14 +11,14 @@ data-file scans.**
 | --- | --- | --- |
 | Reads metadata and manifests | One Java CLI; no Spark or service | Text/JSON and documented exit codes |
 
-> **Status:** v0.1.0-rc.1 pre-release.
+> **Status:** v0.1.0 early release. External Iceberg-user validation is limited.
 
 ## Quick start
 
 Java 17 or newer is required.
 
 ```console
-curl -LO https://github.com/keemgdeok/metadq/releases/download/v0.1.0-rc.1/metadq.jar
+curl -LO https://github.com/keemgdeok/metadq/releases/download/v0.1.0/metadq.jar
 java -jar metadq.jar doctor --demo
 ```
 
