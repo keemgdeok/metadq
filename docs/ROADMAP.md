@@ -1,19 +1,9 @@
 # Roadmap
 
-`metadq` is pre-release. The code, runnable demo, four rules, guarded metadata
-path, and executable JAR are implemented.
+`metadq` 0.1.0 includes the runnable demo, four rules, guarded metadata path,
+cross-platform release checks, and an executable JAR.
 
-## Before 0.1.0
-
-- Keep the documented MinIO and Iceberg REST Catalog smoke test passing.
-- Publish the release JAR only after its checksum and demo pass on Linux and
-  macOS with Java 17.
-- Keep known limitations in the README and release notes.
-- If external Iceberg-user validation remains limited, state that explicitly in
-  the release notes.
-- Tag `v0.1.0` and attach the runnable JAR and its checksum.
-
-## After 0.1.0
+## Current priorities
 
 - Validate the demo with Iceberg users and record concrete tables or workflows
   where they would try it.
