@@ -18,7 +18,7 @@ data-file scans.**
 Java 17 or newer is required.
 
 ```console
-curl -LO https://github.com/keemgdeok/metadq/releases/download/v0.1.0/metadq.jar
+curl -LO https://github.com/keemgdeok/metadq/releases/latest/download/metadq.jar
 java -jar metadq.jar doctor --demo
 ```
 
