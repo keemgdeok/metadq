@@ -61,6 +61,7 @@ jobs:
           fi
           java -jar metadq.jar doctor --demo | tee demo-output.txt
           grep -F "GUARD      No content data files opened." demo-output.txt
+          test "$(java -jar metadq.jar --version)" = "metadq ${GITHUB_REF_NAME#v}"
 
   release:
     needs: smoke

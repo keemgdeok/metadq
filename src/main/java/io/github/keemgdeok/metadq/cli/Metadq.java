@@ -9,7 +9,7 @@ import picocli.CommandLine.Spec;
     name = "metadq",
     description = "Conservative data-quality evidence from Apache Iceberg metadata.",
     mixinStandardHelpOptions = true,
-    version = "metadq 0.1.0-SNAPSHOT",
+    version = "metadq 0.1.1",
     subcommands = {DoctorCommand.class, CheckCommand.class})
 public final class Metadq implements Runnable {
   @Spec private CommandSpec spec;
