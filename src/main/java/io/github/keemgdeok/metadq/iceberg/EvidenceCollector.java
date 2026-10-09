@@ -193,6 +193,9 @@ public final class EvidenceCollector {
       if (isNegative(values) || isNegative(nulls) || isNegative(nans)) {
         inconsistent = true;
       }
+      if (nulls != null && nulls > file.recordCount()) {
+        inconsistent = true;
+      }
       if (values != null && nulls != null && nulls > values) {
         inconsistent = true;
       }
